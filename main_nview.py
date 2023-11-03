@@ -58,6 +58,8 @@ if args.method == "wynerdca":
 	algrun = alg.wynerDCAnV
 elif args.method == "wyneram":
 	algrun = alg.wynerAMnV
+elif args.method == "wynervi":
+	algrun = alg.wynerVInV
 elif args.method == "gd":
 	algrun = bs.gdnV
 else:
@@ -71,6 +73,10 @@ for beta in gamma_range:
 	for nz in nz_set:
 		for nn in range(args.nrun):
 			out_dict = algrun(prob_joint,nz,beta,args.maxiter,args.convthres,**alg_dict)
+			if out_dict.get("error",False):
+				print("the answer is")
+				print(data_dict['pxcy_list'])
+				sys.exit("ERROR occurred, abort")
 			# calculate the mutual informations
 			pz = out_dict["pz"]
 			
@@ -121,7 +127,7 @@ for beta in gamma_range:
 			# saving
 			res_record.append(sv_dict)
 			#res_cnt +=1
-
+'''
 timenow= datetime.datetime.now()
 # result directory
 d_cwd = os.getcwd()
@@ -135,3 +141,4 @@ with open(os.path.join(d_save_dir,safe_savename+"_config.pkl"),"wb") as fid:
 with open(os.path.join(d_save_dir,safe_savename+".pkl"),'wb') as fid:
 	pickle.dump(res_record,fid)
 print("Saving the results to:{:}".format(os.path.join(d_save_dir,safe_savename+".pkl")))
+'''

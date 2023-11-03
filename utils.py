@@ -224,7 +224,7 @@ def calcPZcXV(pxcz_list,pz):
 
 def calcPXWZ(pxcz_list,pz,widx):
 	# product by excluding widx
-	nviews = len(pxcz_list)
+	#nviews = len(pxcz_list)
 	expand_pxcz =getExpandList(pxcz_list)
 	mm = 1
 	for vidx, item in enumerate(expand_pxcz):

@@ -242,6 +242,17 @@ def wynerAMnV(pxv,nz,gamma,maxiter,convthres,**kwargs):
 			conv_flag = True
 			break
 		else:
+			'''
+			if itcnt > 5000 and itcnt<5005:
+				print("itcnt {:}".format(itcnt))
+				print(cur_loss)
+				print(new_loss)
+				print('diff',np.fabs(new_loss - cur_loss))
+				print([item for item in pxcz_list])
+				#sys.exit()
+			elif itcnt>5010:
+				return {"error":True}
+			'''
 			cur_loss = new_loss
 			cur_pxvz = new_pxvz
 	pzcxv = ut.calcPZcXV(pxcz_list,pz)
@@ -249,6 +260,82 @@ def wynerAMnV(pxv,nz,gamma,maxiter,convthres,**kwargs):
 	est_pzxv = np.transpose(new_pxvz,axes=tr_seq)
 	return {"conv":conv_flag,"niter":itcnt,"pzcxv":pzcxv,"pz":pz,"pxcz_list":pxcz_list,"est_pzxv":est_pzxv}
 
+# VI algorithm
+'''
+def wynerVInV(pxv,nz,gamma,maxiter,convthres,**kwargs):
+	d_seed = kwargs.get("seed",None)
+	rng = np.random.default_rng(d_seed)
+	nx_shape = pxv.shape
+	nview = len(pxv.shape)
+	# assumption: uniformly Z
+	pz = np.ones((nz,)) * (1/nz)
+	px_list, p_cond = ut.computeNvPriors(pxv)
+	if "init_load" in kwargs.keys():
+		pxcz_list = kwargs['init_load']
+	else:
+		# random initialization
+		pxcz_list =[]
+		for vidx in range(nview):
+			tmp_pxcz = rng.random((nx_shape[vidx],nz))
+			pxcz_list.append(tmp_pxcz/np.sum(tmp_pxcz,axis=0,keepdims=True))
+	def compute_loss(pxvz,pz,beta):
+		# MILOSS
+		entz = -np.sum(pz*np.log(pz))
+		pzcxv_rev = pxvz / np.sum(pxvz,axis=-1,keepdims=True)
+		entz_cxv = -np.sum(pxvz*np.log(pzcxv_rev))
+		mi_loss = entz - entz_cxv
+		# dkl
+		est_pxv = np.sum(pxvz,axis=-1) # nxv
+		dkl_xv = np.sum(xlogy(est_pxv,est_pxv/pxv))
+		return mi_loss + beta * dkl_xv
+	itcnt = 0
+	conv_flag = False
+	cur_pxvz = ut.calcPXVZ(pxcz_list,pz)
+	cur_loss  = compute_loss(cur_pxvz,pz,gamma)
+	while itcnt<maxiter:
+		itcnt +=1
+		for vidx in range(nview):
+			#tmp_px = px_list[vidx]
+			#tmp_pwcx = p_cond[vidx] # the last is vidx
+			tmp_pwz = ut.calcPXWZ(pxcz_list,pz,vidx)# exclude vidx
+			tmp_pwcz = np.squeeze(tmp_pwz/np.sum(tmp_pwz,axis=-1,keepdims=True))
+			# (nx^{D-1},nz)
+			# DKL exponent
+			#dkl_zxi = ut.computeDKL(tmp_pwcz,tmp_pwcx) # (nx,nz)
+			est_pxv = ut.calcPXV(pxcz_list,pz)
+			# transpose
+			
+			# smoothing
+			new_expo -= np.amax(new_expo,axis=0)
+			new_pxcz = np.exp(new_expo)+1e-8 # smooth epsilon
+			new_pxcz /= np.sum(new_pxcz,axis=0,keepdims=True)
+			# put into the list 
+			pxcz_list[vidx] = new_pxcz # update here and the subsequent steps will use new pxcz
+		# pxcz_list now is a new list
+		# check convergence
+		new_pxvz = ut.calcPXVZ(pxcz_list,pz)
+		new_loss = compute_loss(new_pxvz,pz,gamma)
+
+		if np.fabs(new_loss - cur_loss)<convthres:
+			conv_flag = True
+			break
+		else:
+			#if itcnt > 5000 and itcnt<5005:
+			#	print("itcnt {:}".format(itcnt))
+			#	print(cur_loss)
+			#	print(new_loss)
+			#	print('diff',np.fabs(new_loss - cur_loss))
+			#	print([item for item in pxcz_list])
+			#	#sys.exit()
+			#elif itcnt>5010:
+			#	return {"error":True}
+			cur_loss = new_loss
+			cur_pxvz = new_pxvz
+	pzcxv = ut.calcPZcXV(pxcz_list,pz)
+	tr_seq = tuple([nview]+list(np.arange(0,nview)))
+	est_pzxv = np.transpose(new_pxvz,axes=tr_seq)
+	return {"conv":conv_flag,"niter":itcnt,"pzcxv":pzcxv,"pz":pz,"pxcz_list":pxcz_list,"est_pzxv":est_pzxv}
+'''
 # gradient-based optimizer
 # alternating minimization solver
 # Proposed in: 
