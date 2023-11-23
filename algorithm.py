@@ -176,6 +176,7 @@ def wynerAM(px1x2,nz,gamma,maxiter,convthres,**kwargs):
 # FIXME: checking the broadcast function works properly
 def wynerAMnV(pxv,nz,gamma,maxiter,convthres,**kwargs):
 	d_seed = kwargs.get("seed",None)
+	d_patience_lim = kwargs.get("patience",500)
 	rng = np.random.default_rng(d_seed)
 	nx_shape = pxv.shape
 	nview = len(pxv.shape)
@@ -201,11 +202,13 @@ def wynerAMnV(pxv,nz,gamma,maxiter,convthres,**kwargs):
 		dkl_xv = np.sum(xlogy(est_pxv,est_pxv/pxv))
 		return mi_loss + beta * dkl_xv
 	itcnt = 0
+	patient_cnt = 0
 	conv_flag = False
 	cur_pxvz = ut.calcPXVZ(pxcz_list,pz)
 	cur_loss  = compute_loss(cur_pxvz,pz,gamma)
 	while itcnt<maxiter:
 		itcnt +=1
+		patient_cnt +=1
 		for vidx in range(nview):
 			tmp_px = px_list[vidx]
 			tmp_pwcx = p_cond[vidx] # the last is vidx
@@ -218,7 +221,8 @@ def wynerAMnV(pxv,nz,gamma,maxiter,convthres,**kwargs):
 			# transpose
 			trs_seq = tuple([item for item in range(nview) if item != vidx]+[vidx])
 			est_pwcx = np.transpose(est_pxv,axes=trs_seq)
-			est_px = np.sum(est_pwcx,axis=tuple(np.arange(nview-1)))
+			#est_px = np.sum(est_pwcx,axis=tuple(np.arange(nview-1)))
+			est_px = np.sum(pxcz_list[vidx]*pz[None,:],axis=1)
 			est_pwcx = est_pwcx / np.sum(est_pwcx,axis=tuple(np.arange(nview-1)),keepdims=True)
 			# compute the second exponent
 			bdiv_ratio = np.expand_dims(tmp_pwcx/est_pwcx,axis=-1)
@@ -226,7 +230,8 @@ def wynerAMnV(pxv,nz,gamma,maxiter,convthres,**kwargs):
 			# both (dkl_zxi and bdiv should be in (nx,nz) shape)
 			# the logpx ratio should be included as well
 			px_llr = np.log(tmp_px/est_px) # should be (nx,)
-			new_expo = -dkl_zxi + gamma * bdiv + gamma * px_llr[:,None] # (nx,nz) for all 
+			new_expo = - (gamma+1) * dkl_zxi + gamma * bdiv + gamma * px_llr[:,None] # (nx,nz) for all 
+			#new_expo = - dkl_zxi + gamma * bdiv + gamma * px_llr[:,None] # (nx,nz) for all 
 			# smoothing
 			new_expo -= np.amax(new_expo,axis=0)
 			new_pxcz = tmp_px[:,None]* np.exp(new_expo)+1e-8 # smooth epsilon
@@ -253,8 +258,19 @@ def wynerAMnV(pxv,nz,gamma,maxiter,convthres,**kwargs):
 			elif itcnt>5010:
 				return {"error":True}
 			'''
-			cur_loss = new_loss
-			cur_pxvz = new_pxvz
+			if patient_cnt % d_patience_lim ==0:
+				# restart 
+				pxcz_list =[]
+				for vidx in range(nview):
+					tmp_pxcz = rng.random((nx_shape[vidx],nz))
+					pxcz_list.append(tmp_pxcz/np.sum(tmp_pxcz,axis=0,keepdims=True))
+				print("[LOG] restart with random initialization")
+				cur_pxvz = ut.calcPXVZ(pxcz_list,pz)
+				cur_loss  = compute_loss(cur_pxvz,pz,gamma)
+				patient_cnt= 0 
+			else:
+				cur_loss = new_loss
+				cur_pxvz = new_pxvz
 	pzcxv = ut.calcPZcXV(pxcz_list,pz)
 	tr_seq = tuple([nview]+list(np.arange(0,nview)))
 	est_pzxv = np.transpose(new_pxvz,axes=tr_seq)

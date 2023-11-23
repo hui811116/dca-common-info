@@ -17,7 +17,7 @@ import time
 
 parser = argparse.ArgumentParser()
 parser.add_argument("method",choices=['wynerdca','wyneram','gd'])
-parser.add_argument("--maxiter",type=int,default=50000,help="maximum iteration before termination")
+parser.add_argument("--maxiter",type=int,default=5000,help="maximum iteration before termination")
 parser.add_argument("--convthres",type=float,default=1e-6,help="convergence threshold")
 parser.add_argument("--nrun",type=int,default=10,help="number of trail of each simulation")
 parser.add_argument("--ss_init",type=float,default=1e-1,help="step size initialization")
@@ -31,6 +31,7 @@ parser.add_argument("--betamin",type=float,default=0.1,help="minimum trade-off p
 parser.add_argument("--betamax",type=float,default=2.5,help="maximum trade-off parameter for search")
 parser.add_argument("--numbeta",type=int,default=20,help="number of search points")
 parser.add_argument("--nview",type=int,default=3,help="number of views")
+parser.add_argument("--patience",type=int,default=500,help="patience before restarting")
 
 
 args = parser.parse_args()
@@ -52,6 +53,7 @@ alg_dict = {
 'ss_init':args.ss_init,
 'ss_scale':args.ss_scale,
 "seed":args.seed,
+"patience":args.patience,
 }
 
 if args.method == "wynerdca":
@@ -72,7 +74,9 @@ res_record =[]
 for beta in gamma_range:
 	for nz in nz_set:
 		for nn in range(args.nrun):
+			rt_t = time.time()
 			out_dict = algrun(prob_joint,nz,beta,args.maxiter,args.convthres,**alg_dict)
+			rt_dt = time.time()-rt_t
 			if out_dict.get("error",False):
 				print("the answer is")
 				print(data_dict['pxcy_list'])
@@ -106,7 +110,8 @@ for beta in gamma_range:
 			# what to save? # list of dictionaries
 			sv_dict = {
 				"nz":nz,"beta":beta,"conv":out_dict['conv'],'niter':out_dict['niter'],
-				"VIzx":vi_mi,"VHz":vi_entz,"WIzx":wy_mi,"WHz":entz,'DKL':dkl_error}
+				"VIzx":vi_mi,"VHz":vi_entz,"WIzx":wy_mi,"WHz":entz,'DKL':dkl_error,
+				"runtime":rt_dt}
 			# compute conditional MI
 			status_tex = ["nz,{:},beta,{:.3f},conv,{:},nit,{:},DKL,{:.3e},IW,{:.3e},IV:{:.3e}".format(
 							nz,beta,out_dict['conv'],out_dict['niter'],dkl_error,wy_mi,vi_mi)]
@@ -127,7 +132,7 @@ for beta in gamma_range:
 			# saving
 			res_record.append(sv_dict)
 			#res_cnt +=1
-'''
+
 timenow= datetime.datetime.now()
 # result directory
 d_cwd = os.getcwd()
@@ -141,4 +146,3 @@ with open(os.path.join(d_save_dir,safe_savename+"_config.pkl"),"wb") as fid:
 with open(os.path.join(d_save_dir,safe_savename+".pkl"),'wb') as fid:
 	pickle.dump(res_record,fid)
 print("Saving the results to:{:}".format(os.path.join(d_save_dir,safe_savename+".pkl")))
-'''
