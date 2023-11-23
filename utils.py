@@ -263,3 +263,17 @@ def getPZWsetDCA(pzxv,set_dict):
 		pzw_cmpl = np.sum(pzxv,axis=add_idset,keepdims=True)
 		out_list.append([pzw,pzw_cmpl])
 	return out_list
+
+def getPZCXsetDCA(pzxv,set_dict):
+	out_list =[]
+	nview = len(pzxv.shape)-1
+	pzcxv = pzxv/np.sum(pzxv,axis=0,keepdims=True)
+	for sidx, (idset, idset_cmpl) in enumerate(set_dict['tuple_list']):
+		add_idset = tuple(np.array(list(idset))+1)
+		add_idset_cmpl = tuple(np.array(list(idset_cmpl))+1)
+		pzw = np.sum(pzxv,axis=add_idset_cmpl,keepdims=True)
+		pzcw = pzw / np.sum(pzw,axis=0,keepdims=True)
+		pzw_cmpl = np.sum(pzxv,axis=add_idset,keepdims=True)
+		pzcw_cmpl = pzw_cmpl / np.sum(pzw_cmpl,axis=0,keepdims=True)
+		out_list.append([pzcw,pzcw_cmpl])
+	return out_list

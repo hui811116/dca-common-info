@@ -576,8 +576,9 @@ def wynerDCAnV(pxv,nz,gamma,maxiter,convthres,**kwargs):
 	itcnt =0
 	conv_flag = False
 	#
-	pzcx_set = ut.getPZWsetDCA(pzxv,set_dict) # shape (nz,nxv)<-keepdims
-	cur_loss = compute_loss(pzcxv,pz,pzcx_set,pxv,gamma)
+	pzw_set = ut.getPZWsetDCA(pzxv,set_dict) # shape (nz,nxv)<-keepdims
+	pzcx_set = ut.getPZCXsetDCA(pzxv,set_dict)
+	cur_loss = compute_loss(pzcxv,pz,pzw_set,pxv,gamma)
 	while itcnt < maxiter:
 		itcnt+=1
 		# update the new pzcxv
@@ -595,8 +596,9 @@ def wynerDCAnV(pxv,nz,gamma,maxiter,convthres,**kwargs):
 		new_pz = np.sum(new_pzxv,axis=tuple(np.arange(1,nview+1)))
 		new_pz/=np.sum(new_pz) # for stability
 		# new loss
-		newpzcx_set = ut.getPZWsetDCA(new_pzxv,set_dict)
-		new_loss = compute_loss(new_pzcxv,new_pz,newpzcx_set,pxv,gamma)
+		newpzcx_set = ut.getPZCXsetDCA(new_pzxv,set_dict)
+		newpzw_set = ut.getPZWsetDCA(new_pzxv,set_dict)
+		new_loss = compute_loss(new_pzcxv,new_pz,newpzw_set,pxv,gamma)
 		conv_cond = np.fabs(new_loss - cur_loss)
 		if conv_cond<convthres:
 			conv_flag = True
