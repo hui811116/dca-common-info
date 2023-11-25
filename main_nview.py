@@ -16,7 +16,7 @@ import time
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("method",choices=['wynerdca','wyneram','gd'])
+parser.add_argument("method",choices=['wynerdca','wyneram','gd','dca2v'])
 parser.add_argument("--maxiter",type=int,default=5000,help="maximum iteration before termination")
 parser.add_argument("--convthres",type=float,default=1e-6,help="convergence threshold")
 parser.add_argument("--nrun",type=int,default=10,help="number of trail of each simulation")
@@ -64,6 +64,8 @@ elif args.method == "wynervi":
 	algrun = alg.wynerVInV
 elif args.method == "gd":
 	algrun = bs.gdnV
+elif args.method == "dca2v":
+	algrun = alg.wynerDCA
 else:
 	sys.exit("undefined method {:}".format(args.method))
 
@@ -98,7 +100,8 @@ for beta in gamma_range:
 			dkl_error = ut.calcKL(prob_joint,est_pxv)
 
 			# wyner MI
-			entz = ut.calcEnt(np.sum(wy_pzxv,axis=tuple(np.arange(1,args.nview+1))))
+			est_pz = np.sum(wy_pzxv,axis=tuple(np.arange(1,args.nview+1)))
+			entz = ut.calcEnt(est_pz)
 			entzcxv = np.sum(-wy_pzxv * np.log(pzcxv))
 			wy_mi = entz - entzcxv
 

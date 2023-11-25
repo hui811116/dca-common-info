@@ -38,13 +38,15 @@ def getSetDict(pxv,mi=False):
 	for widx in range(1,int(np.floor(nview/2)+1)):
 		for item in itertools.combinations(set_dict['uniset'],widx):
 			cmpl_tuple = tuple(set_dict['uniset']-set(item)) 
-			set_dict['tuple_list'].append((item,cmpl_tuple)) # from tuple to set
-			pw_wcmpl = pxv / np.sum(pxv,axis=item,keepdims=True)
-			pwcmpl_w = pxv / np.sum(pxv,axis=cmpl_tuple,keepdims=True)
-			set_dict['cond_list'].append((pw_wcmpl,pwcmpl_w))
-			# compute mi
-			if mi:
-				set_dict['mi'].append(calcMIXS(pxv,item))
+			if (item,cmpl_tuple) in set_dict['tuple_list'] or (cmpl_tuple,item) in set_dict['tuple_list']:
+				pass
+			else:
+				set_dict['tuple_list'].append((item,cmpl_tuple))
+				pw_wcmpl = pxv/ np.sum(pxv,axis=item,keepdims=True)
+				pwcmpl_w = pxv/ np.sum(pxv,axis=cmpl_tuple,keepdims=True)
+				set_dict['cond_list'].append((pw_wcmpl,pwcmpl_w))
+				if mi:
+					set_dict['mi'].append(calcMIXS(pxv,item))
 	return set_dict
 
 def calcMInV(pzxv):
@@ -60,19 +62,23 @@ def getCompMI(pzxv):
 	nview = len(pzxv.shape)-1
 	uniset = set(np.arange(nview))
 	pz = np.sum(pzxv,axis=tuple(np.arange(1,nview+1)))
+	tuple_set = []
 	compMI_list = []
 	for widx in range(1,int(np.floor(nview/2)+1)):
 		for item in itertools.combinations(uniset,widx):
 			cmpl_tuple = tuple(uniset - set(item)) #WSc
-			# get pzw, then pzcw, mi=f(pzcw,pz)
-			wnew = tuple(np.array(list(item))+1) # shift 1 for Z
-			pzw = np.sum(pzxv,axis=wnew)
-			mizw = calcMInV(pzw)
+			if (item,cmpl_tuple) in tuple_set or (cmpl_tuple,item) in tuple_set:
+				pass
+			else:
+				tuple_set.append((item,cmpl_tuple))
+				wnew = tuple(np.array(list(item))+1)
+				pzw = np.sum(pzxv,axis=wnew)
+				mizw = calcMInV(pzw)
 
-			wcmpl_new = tuple(np.array(list(cmpl_tuple))+1)
-			pz_wcmpl = np.sum(pzxv,axis=wcmpl_new)
-			mizw_cmpl = calcMInV(pz_wcmpl)
-			compMI_list.append([mizw,mizw_cmpl])
+				wcmpl_new = tuple(np.array(list(cmpl_tuple))+1)
+				pz_wcmpl = np.sum(pzxv,axis=wcmpl_new)
+				mizw_cmpl = calcMInV(pz_wcmpl)
+				compMI_list.append([mizw,mizw_cmpl])
 	return compMI_list
 
 def computeNvPriors(pxv):
@@ -251,10 +257,10 @@ def getPZWsetDCA(pzxv,set_dict):
 	out_list =[]
 	# set dict
 	# set_dict = {"uniset":set(np.arange(nview)),"tuple_list":[],'cond_list':[]}
-	nview = len(pzxv.shape)-1
-	pzcxv = pzxv/np.sum(pzxv,axis=0,keepdims=True)
+	#nview = len(pzxv.shape)-1
+	#pzcxv = pzxv/np.sum(pzxv,axis=0,keepdims=True)
 	for sidx ,(idset, idset_cmpl) in enumerate(set_dict['tuple_list']):
-		cp_pw, cp_pw_cmpl = set_dict['cond_list'][sidx] # pw_wcmpl
+		#cp_pw, cp_pw_cmpl = set_dict['cond_list'][sidx] # pw_wcmpl
 		# append index set
 		add_idset = tuple(np.array(list(idset))+1)
 		add_idset_cmpl = tuple(np.array(list(idset_cmpl))+1)
@@ -266,8 +272,8 @@ def getPZWsetDCA(pzxv,set_dict):
 
 def getPZCXsetDCA(pzxv,set_dict):
 	out_list =[]
-	nview = len(pzxv.shape)-1
-	pzcxv = pzxv/np.sum(pzxv,axis=0,keepdims=True)
+	#nview = len(pzxv.shape)-1
+	#pzcxv = pzxv/np.sum(pzxv,axis=0,keepdims=True)
 	for sidx, (idset, idset_cmpl) in enumerate(set_dict['tuple_list']):
 		add_idset = tuple(np.array(list(idset))+1)
 		add_idset_cmpl = tuple(np.array(list(idset_cmpl))+1)
