@@ -49,7 +49,8 @@ for item in os.listdir(argv[1]):
 		for dd in rec:
 			#"nz":nz,"beta":beta,"conv":out_dict['conv'],'niter':out_dict['niter'],
 			#	"VIzx":vi_mi,"VHz":vi_entz,"WIzx":wy_mi,"WHz":entz,'DKL':dkl_error,
-			#	"runtime":rt_dt
+			#	"runtime":rt_dt,'acc':ev_dict['acc'],'acc_cnt':ev_dict['acc_cnt'],
+			#	'total_cnt':ev_dict['total_cnt']
 			## sv_dict
 			#	sv_dict["CI_{:}".format(cidx)] = cmi
 			#	sv_dict["IXX_{:}".format(cidx)] = mixx
@@ -71,6 +72,7 @@ for item in os.listdir(argv[1]):
 			wy_mi = dd['WIzx']
 			dkl = dd['DKL']
 			rt = dd.get('runtime',0.)
+			acc = dd.get("acc",0.)
 			niter = dd['niter']
 			ci_list = []
 			ccnt = 0
@@ -82,12 +84,12 @@ for item in os.listdir(argv[1]):
 					break
 				ccnt +=1 
 			ci_sum = np.sum(np.array(ci_list).astype("float"))
-			stats = np.array([conv,wy_mi,ci_sum,dkl,rt,niter]).astype("float")
+			stats = np.array([conv,wy_mi,ci_sum,dkl,rt,niter,acc]).astype("float")
 			rec_dict[method][nview][ny][corr][nz][beta].append(stats)
 
 # collected, print out
-hdr = "Nview,ny,corr,nz,beta,conv,wy_mi,ci_sum,dkl,rt,niter"
-print("Method,Nview,ny,corr,nz,beta,conv,wy_mi,ci_sum,dkl,rt,niter")
+hdr = "Nview,ny,corr,nz,beta,conv,wy_mi,ci_sum,dkl,rt,niter,acc"
+print("Method,Nview,ny,corr,nz,beta,conv,wy_mi,ci_sum,dkl,rt,niter,acc")
 mat_dict = {"header":hdr,"array":[]}
 for method,m_d in rec_dict.items():
 	for nview, v_d in m_d.items():

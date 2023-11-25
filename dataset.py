@@ -133,6 +133,28 @@ def synToy():
 # NOTE: nview dataset
 # independent copies
 
+def datasetNView(ny,nb,corr,nv,**kwargs):
+	ntest = kwargs.get("ntest",10000)
+	d_seed = kwargs.get("seed",1234)
+	rng = np.random.default_rng(seed=d_seed)
+	dist_dict = synToyNView(ny,nb,corr,nv,**kwargs)
+	# inverse transform sampling
+	pxcy_list = dist_dict['pxcy_list']
+	ylabel = rng.integers(ny,size=(ntest,))
+	xnview = []
+	xrnd = rng.random((ntest,nv))
+	for v in range(nv):
+		xn_tmp = []
+		samp_map = np.cumsum(pxcy_list[v],axis=0)
+		for ni, yi in enumerate(ylabel):
+			tmp_prob = xrnd[ni,v]
+			diff_mat = (samp_map[:,yi] - tmp_prob)< 0.0
+			xreal = np.sum(diff_mat)
+			xn_tmp.append(xreal)
+		xn_tmp = np.array(xn_tmp)
+		xnview.append(xn_tmp)
+	return {'y_test':ylabel,'xn_test':xnview,'train':dist_dict}
+
 def synToyNView(ny,nb,corr,nv,**kwargs):
 	d_seed = kwargs.get("seed",1234)
 	rng = np.random.default_rng(seed=d_seed)

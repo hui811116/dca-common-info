@@ -16,13 +16,13 @@ import time
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("method",choices=['wynerdca','wyneram','gd','dca2v'])
+parser.add_argument("method",choices=['wynerdca','wyneram','gd'])
 parser.add_argument("--maxiter",type=int,default=5000,help="maximum iteration before termination")
 parser.add_argument("--convthres",type=float,default=1e-6,help="convergence threshold")
 parser.add_argument("--nrun",type=int,default=10,help="number of trail of each simulation")
 parser.add_argument("--ss_init",type=float,default=1e-1,help="step size initialization")
 parser.add_argument("--ss_scale",type=float,default=0.25,help="step size scaling")
-parser.add_argument("--output_dir",type=str,default="wynerCI_results",help="output filename")
+parser.add_argument("--output_dir",type=str,default="wynerCI_clustering",help="output filename")
 parser.add_argument("--seed",type=int,default=None,help="random seed for reproduction")
 parser.add_argument("--ny",type=int,default=2,help="number of uniform hidden labels")
 parser.add_argument("--nb",type=int,default=2,help="number of blocks for observations")
@@ -39,7 +39,11 @@ argsdict = vars(args)
 
 print(argsdict)
 
-data_dict = dt.synToyNView(args.ny,args.nb,args.corr,args.nview)
+dataset = dt.datasetNView(args.ny,args.nb,args.corr,args.nview,)
+data_dict = dataset['train']
+y_test = dataset['y_test']
+xv_test = dataset['xn_test']
+
 prob_joint = data_dict["p_joint"] # pxv
 # I(Z;XV) = I(XS;XSc|Z) - I(XS;Z) - I(XSc;Z) + I(XS;XSc) \forall S\in\Pi_V
 # shoud compute all combinations of XS...
@@ -83,10 +87,13 @@ for beta in gamma_range:
 				print("the answer is")
 				print(data_dict['pxcy_list'])
 				sys.exit("ERROR occurred, abort")
+			# evaluate with clustering testing data
 			# calculate the mutual informations
 			pz = out_dict["pz"]
-			
 			pzcxv = out_dict['pzcxv'] # this might not be a valid prob, but is projected to a valid one
+			tmp_yest = ev.evalDecoderSampling(xv_test,pzcxv) # NOTE: can add seed here for reproduction
+			ev_dict = ev.compute_metrics(y_test,tmp_yest)
+			# keys: "acc", "acc_cnt", "total_cnt"
 			est_pzxv = out_dict['est_pzxv']
 			# Wyner problem evaluation # note: given p(z|x^V), 
 			wy_pzxv = pzcxv * prob_joint[None,...]
@@ -114,9 +121,10 @@ for beta in gamma_range:
 			sv_dict = {
 				"nz":nz,"beta":beta,"conv":out_dict['conv'],'niter':out_dict['niter'],
 				"VIzx":vi_mi,"VHz":vi_entz,"WIzx":wy_mi,"WHz":entz,'DKL':dkl_error,
-				"runtime":rt_dt}
+				"runtime":rt_dt,'acc':ev_dict['acc'],'acc_cnt':ev_dict['acc_cnt'],
+				'total_cnt':ev_dict['total_cnt']}
 			# compute conditional MI
-			status_tex = ["nz,{:},beta,{:.3f},conv,{:},nit,{:},DKL,{:.3e},IW,{:.3e},IV:{:.3e}".format(
+			status_tex = ["nz,{:},beta,{:.3f},conv,{:},nit,{:},DKL,{:.3f},IW,{:.3f},IV:{:.3f}".format(
 							nz,beta,out_dict['conv'],out_dict['niter'],dkl_error,wy_mi,vi_mi)]
 			condmi_list =[]
 			for cidx, item in enumerate(comp_mizw):
@@ -129,7 +137,8 @@ for beta in gamma_range:
 				sv_dict["IXX_{:}".format(cidx)] = mixx
 				sv_dict['Izw_{:}'.format(cidx)] = mizw
 				sv_dict['Izwcmpl_{:}'.format(cidx)] = mizw_cmpl
-				status_tex.append("CI{:},{:.3e}".format(cidx,cmi))
+			status_tex.append("CIsum,{:.4f}".format(sum(condmi_list)))
+			status_tex.append("Acc,{:.4f}".format(ev_dict['acc']))
 			# reporting			
 			print(",".join(status_tex))
 			# saving
@@ -141,7 +150,7 @@ timenow= datetime.datetime.now()
 d_cwd = os.getcwd()
 d_save_dir = os.path.join(d_cwd,args.output_dir)
 os.makedirs(d_save_dir,exist_ok=True)
-savename_base = "wynerCI_{:}_V{:}_y{:}b{:}_cr{:.4f}_{:}".format(args.method,args.nview,args.ny,args.nb,args.corr,timenow.strftime("%Y%m%d"))
+savename_base = "wynerCluster_{:}_V{:}_y{:}b{:}_cr{:.4f}_{:}".format(args.method,args.nview,args.ny,args.nb,args.corr,timenow.strftime("%Y%m%d"))
 safe_savename = ut.getSafeSaveName(args.output_dir,savename_base,'.pkl')
 
 with open(os.path.join(d_save_dir,safe_savename+"_config.pkl"),"wb") as fid:

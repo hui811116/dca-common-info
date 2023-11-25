@@ -4,11 +4,7 @@ from numpy.random import default_rng
 
 import os
 import sys
-import torch
-from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import MinMaxScaler
-import itertools
-
 from sklearn.cluster import KMeans
 from sklearn import datasets
 from scipy.optimize import linear_sum_assignment
@@ -16,6 +12,22 @@ from sklearn.metrics import normalized_mutual_info_score, confusion_matrix, adju
 
 from munkres import Munkres
 
+def evalDecoderSampling(xn_test,pzcxv,**kwargs):
+	d_seed = kwargs.get("seed",None)
+	rng = np.random.default_rng(d_seed) # always give random 
+	y_est = []
+	nview = len(xn_test)
+	nz = pzcxv.shape[0]
+	nsample = xn_test[0].shape[0]
+	rand_samp = rng.random((nsample,))
+	samp_map = np.cumsum(pzcxv,axis=0)
+	for idx in range(nsample):
+		idx_set = [xv[idx] for xv in xn_test]
+		samp_prob = samp_map[tuple([slice(None)]+idx_set)]
+		ys = np.sum((rand_samp[idx]-samp_prob)>0)
+		y_est.append(ys)
+	y_est = np.array(y_est)
+	return y_est
 
 def labelSampling(y_label,x_sample,z_enc):
 	rng = default_rng()
@@ -43,25 +55,6 @@ def oneHot(zlabel,num_dim):
 	for idx, item in enumerate(zlabel):
 		output[idx,item] = 1.0
 	return output
-
-def evalSamples2V(y_train,x_train,y_test,x_test,z_enc):
-	rng = default_rng()
-	ylist = []
-	for ele in y_train:
-		if not ele in ylist:
-			ylist.append(ele)
-	ny = len(ylist)
-	z_train = labelSampling(y_train,x_train,z_enc)
-	z_test = labelSampling(y_test,x_test,z_enc)
-	z_train_one = oneHot(z_train,ny)
-	z_test_one = oneHot(z_test,ny)
-	# use the trained classifier
-	# fitted afterward
-	classifier = LogisticRegression(solver="saga",multi_class="multinomial").fit(z_train_one,y_train)
-	# use the fitted classifier to score
-	train_acc = classifier.score(z_train_one,y_train)
-	test_acc = classifier.score(z_test_one,y_test)
-	return train_acc, test_acc
 
 #### from WVAE-Torch
 
