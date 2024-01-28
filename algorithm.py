@@ -73,6 +73,83 @@ def stoGradComp(px1x2,nz,gamma,maxiter,convthres,**kwargs):
 	return {"conv":conv_flag,"niter":itcnt,"pzcx1x2":pzcx1x2,"pz":pz,"pzcx1":pzcx1,"pzcx2":pzcx2}
 '''
 
+def wynerVInV(pxv,nz,gamma,maxiter,convthres,**kwargs):
+	d_esp_overflow = 1e-9
+	d_seed = kwargs.get("seed",None)
+	d_patience_lim = kwargs.get("patience",500)
+	rng = np.random.default_rng(d_seed)
+	nx_shape = pxv.shape
+	nview = len(pxv.shape)
+	pz = np.ones((nz,)) * (1/nz)
+	px_list, p_conf = ut.computeNvPriors(pxv)
+	pwci_list = []
+	for v in range(nview):
+		tmp_pwci = pxv / np.sum(pxv,axis=v,keepdims=True)
+		pwci_list.append(tmp_pwci)
+	if "init_load" in kwargs.keys():
+		pxcz_list = kwargs['init_load']
+	else:
+		pxcz_list =[]
+		for vidx in range(nview):
+			tmp_pxcz = rng.random((nx_shape[vidx],nz))
+			pxcz_list.append(tmp_pxcz/np.sum(tmp_pxcz,axis=0,keepdims=True))
+	def compute_loss(pxvz,pz,beta):
+		entz = -np.sum(pz * np.log(pz))
+		pzcxv_rev = pxvz/np.sum(pxvz,axis=-1,keepdims=True)
+		entzcx = -np.sum(xlogy(pxvz,pzcxv_rev))
+		# mutual information
+		mizxv = entz - entzcx
+		est_pxv = np.sum(pxvz,axis=-1) # (xv_shape)
+		dxv_nv = np.sum(xlogy(pxv,pxv/est_pxv))
+		return mizxv + beta * dxv_nv
+	itcnt = 0
+	patience_cnt = 0
+	conv_flag = False
+	cur_pxvz = ut.calcPXVZ(pxcz_list,pz)
+	cur_loss = compute_loss(cur_pxvz,pz,gamma)
+	while itcnt< maxiter:
+		itcnt +=1
+		patience_cnt +=1
+		
+		# for each view, update list
+		for v in range(nview):
+			# compute projection
+			pzcxv = ut.calcPZcXV(pxcz_list,pz)
+			est_pzxv = pzcxv * pxv[None,...]
+			tmp_px = px_list[v]
+			tmp_pxw_cxi = pwci_list[v]
+			# prob ratio
+			sumaxis = tuple([item+1 for item in range(nview) if item != v]) # extra, z=0
+			res_pz = np.reshape(pz,tuple([len(pz)]+[1]*nview))
+			est_pxicz = np.sum(est_pzxv/res_pz,axis=sumaxis).T # (nxi,nz)
+			pb_ratio = est_pxicz/(pxcz_list[v]+d_esp_overflow) # old item
+			# kl divergence
+			# between p_\theta(x^w|z) and p(x^w|x_i)
+			tmp_pxvz = ut.calcPXVZ(pxcz_list,pz)
+			tmp_pxwcz = np.sum(tmp_pxvz,axis=v+1,keepdims=True)/pz[...,:]
+			dkl_exp = np.sum(xlogy(tmp_pxwcz,tmp_pxwcz/np.expand_dims(tmp_pxw_cxi,axis=-1)))
+			# 
+			tmp_exp = -dkl_exp + gamma * pb_ratio # (nxi,nz)
+			# smoothing
+			tmp_exp -= np.amax(tmp_exp,axis=0)
+			new_pxcz = tmp_px[:,None] * np.exp(tmp_exp) + d_esp_overflow
+			new_pxcz /= np.sum(new_pxcz,axis=0,keepdims=True)
+
+			pxcz_list[v] = new_pxcz
+		# complete all updates for one iteration
+		# update pz
+		pzcxv = ut.calcPZcXV(pxcz_list,pz)
+		est_pzxv = pzcxv * pxv[None,...]
+		new_pz = np.sum(est_pzxv,axis=tuple(np.arange(1,nview+1)))
+		new_pxcz = ut.calcPXVZ(pxcz_list,new_pz)
+		new_loss = compute_loss(new_pxcz,new_pz,gamma)
+		if np.fabs(new_loss - cur_loss) < convthres:
+			conv_flag = True
+			break
+		else:
+			cur_loss = new_loss
+			pz = new_pz
+	return {"conv":conv_flag,"niter":itcnt,"pzcxv":pzcxv,"pz":pz,"pxcz_list":pxcz_list,"est_pzxv":est_pzxv}
 # dev
 # scalable splitting method based wyner common information solver.
 # 

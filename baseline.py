@@ -200,5 +200,5 @@ def gdnV(pxv,nz,gamma,maxiter,convthres,**kwargs):
 			pzcxv = new_pzcxv
 			pz = new_pz
 			cur_ci = new_ci
-		est_pzxv= pzcxv * pxv[None,:]
+	est_pzxv= pzcxv * pxv[None,:]
 	return {"conv":conv_flag,"niter":itcnt,"pzcxv":pzcxv,"pz":pz,"est_pzxv":est_pzxv}

@@ -16,7 +16,7 @@ import time
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("method",choices=['wynerdca','wyneram','gd','dca2v'])
+parser.add_argument("method",choices=['wynerdca','wyneram','gd','dca2v','wynervi'])
 parser.add_argument("--maxiter",type=int,default=5000,help="maximum iteration before termination")
 parser.add_argument("--convthres",type=float,default=1e-6,help="convergence threshold")
 parser.add_argument("--nrun",type=int,default=10,help="number of trail of each simulation")
