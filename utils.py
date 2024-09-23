@@ -159,13 +159,13 @@ def calcDtvError(log_px1cz,log_px2cz,nz,px1x2):
 	pzx1x2 = calcProdProb(log_px1cz,log_px2cz,nz)
 	est_px1x2 = np.sum(pzx1x2,axis=0)
 	return 0.5 * np.sum(np.fabs(est_px1x2 - px1x2))
-def calcProbSoftmax(log_px1cz,log_px2cz):
-	expand_log_px1cz = expandLogPxcz(log_px1cz,adim=2,ndim=nx2)
-	expand_log_px2cz = expandLogPxcz(log_px2cz,adim=1,ndim=nx1)
-	return softmax(expand_log_px1cz+expand_log_px2cz,axis=0)
-def calcCondMi(log_px1cz,log_px2cz,nz):
-	pzx1x2 = calcProdProb(log_px1cz,log_px2cz,nz)		
-	return ut.calcMIcond(np.transpose(pzx1x2,(1,2,0)))
+#def calcProbSoftmax(log_px1cz,log_px2cz):
+#	expand_log_px1cz = expandLogPxcz(log_px1cz,adim=2,ndim=nx2)
+#	expand_log_px2cz = expandLogPxcz(log_px2cz,adim=1,ndim=nx1)
+#	return softmax(expand_log_px1cz+expand_log_px2cz,axis=0)
+#def calcCondMi(log_px1cz,log_px2cz,nz):
+#	pzx1x2 = calcProdProb(log_px1cz,log_px2cz,nz)		
+#	return ut.calcMIcond(np.transpose(pzx1x2,(1,2,0)))
 
 def computeGlobalSolution(px1cy,px2cy,py):
 	smooth_eps = 1e-9
