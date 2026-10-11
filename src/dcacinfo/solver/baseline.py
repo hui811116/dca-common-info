@@ -1,8 +1,8 @@
 import numpy as np
 import sys
 import os
-import gradient_descent as gd
-import utils as ut
+import dcacinfo.solver.gradient_descent as gd
+import dcacinfo.utils._utils as ut
 import copy
 
 # gradient descent baseline 
