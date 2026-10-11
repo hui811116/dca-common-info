@@ -2,14 +2,14 @@ import numpy as np
 import os
 import sys
 import pickle
-import utils as ut
-import algorithm as alg
-import baseline as bs
-import dataset as dt
+import dcacinfo.utils._utils as ut
+import dcacinfo.solver.algorithm as alg
+import dcacinfo.solver.baseline as bs
+import dcacinfo.dataset.dataset as dt
 import datetime
 import copy
 import argparse
-import evaluation as ev
+import dcacinfo.metrics.evaluation as ev
 from scipy.io import savemat
 from scipy.special import xlogy
 import time

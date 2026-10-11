@@ -1,7 +1,7 @@
 import numpy as np
 import sys
 import os
-from scipy.special import softmax, xlogy
+from scipy.special import xlogy
 import copy
 import itertools
 
@@ -82,6 +82,7 @@ def getCompMI(pzxv):
 	return compMI_list
 
 def computeNvPriors(pxv):
+	"""compute nviews priors, and conditional probabilities"""
 	nview = len(pxv.shape)
 	# need px_list, 
 	px_list = []
@@ -97,12 +98,17 @@ def computeNvPriors(pxv):
 	return px_list, p_cond
 
 def calcEnt(pz):
+	"""Calculate the entropy of a probability distribution."""
 	return -np.sum(pz * np.log(pz))
 
 def calcCondEnt(pzx):
+	"""Calculate the conditional entropy of a probability distribution."""
 	return -np.sum(pzx * np.log(pzx/np.sum(pzx,axis=0,keepdims=True)))
 
 def aggregateResults(xdata,ydata,criterion,precision):
+	"""
+	Aggregate results based on the specified criterion (min or max) and precision.
+	"""
 	precision_tex = "{{:.{:}f}}".format(precision)
 	out_dict = {}
 	for idx in range(len(xdata)):

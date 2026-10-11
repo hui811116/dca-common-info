@@ -2,7 +2,7 @@ import numpy as np
 import sys
 import os
 #import gradient_descent as gd
-import utils as ut
+import dcacinfo.utils._utils as ut
 import copy
 from scipy.special import softmax, xlogy
 import itertools
