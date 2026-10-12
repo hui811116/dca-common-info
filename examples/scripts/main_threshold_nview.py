@@ -2,16 +2,15 @@ import numpy as np
 import os
 import sys
 import pickle
-import dcacinfo.utils._utils as ut
-import dcacinfo.solver.algorithm as alg
-import dcacinfo.solver.baseline as bs
-import dcacinfo.dataset.dataset as dt
+import dcacinfo.utils as ut
+import dcacinfo.solver as alg
+import dcacinfo.dataset as dt
 import datetime
 import copy
 import argparse
 import dcacinfo.metrics.evaluation as ev
-from scipy.io import savemat
-from scipy.special import xlogy
+#from scipy.io import savemat
+#from scipy.special import xlogy
 import time
 import pandas as pd
 
@@ -65,7 +64,7 @@ if args.method == "wynerdca":
 elif args.method == "wynervi":
 	algrun = alg.wynerVInV
 elif args.method == "gd":
-	algrun = bs.gdnV
+	algrun = alg.gdnV
 #elif args.method == "dca2v":
 #	algrun = alg.wynerDCA
 else:

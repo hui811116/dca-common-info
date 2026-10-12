@@ -14,36 +14,59 @@ def _init_variables(pxv,nview,nz,seed,load_pzcxv=None):
     return pzcxv, pz, set_dict
 
 def _cmi_subset(pzxv,set_dict):
-    cmi_dict = np.zeros(len(set_dict))
-    for sidx, (item, cmpl_item) in enumerate(set_dict.items()):
-        wnew = tuple(np.array(list(item))+1)
-        pzw = np.sum(pzxv,axis=wnew,keepdims=True)
-        pwcz_rev = pzw/ np.sum(pzw,axis=0,keepdims=True)
-
-        pz_wcmpl = np.sum(pzxv,axis=tuple(np.array(list(cmpl_item))+1),keepdims=True)
-        pwcmpl_cz_rev = pz_wcmpl/ np.sum(pz_wcmpl,axis=0,keepdims=True)
-        # 
-        pxvcz_rev = pzxv / np.sum(pzxv,axis=0,keepdims=True)
-        #cmi_dict[sidx] = np.sum(pzxv * (np.log(pxvcz_rev) - np.log(pwcz_rev) - np.log(pwcmpl_cz_rev)))
-        cmi_dict[sidx] = np.sum(pzxv * (np.log(pxvcz_rev) - np.log(pwcz_rev) - np.log(pwcmpl_cz_rev)))
+    cmi_dict = np.zeros(len(set_dict["tuple_list"]))
+    tiny = np.finfo(float).tiny
+    nview = pzxv.ndim - 1
+    pz = np.sum(pzxv, axis=tuple(range(1, nview + 1)), keepdims=True)
+    pxv_given_z = np.divide(
+        pzxv,
+        pz,
+        out=np.zeros_like(pzxv, dtype=float),
+        where=pz > 0,
+    )
+    for sidx, (item, cmpl_item) in enumerate(set_dict["tuple_list"]):
+        item_axes = tuple(index + 1 for index in item)
+        cmpl_axes = tuple(index + 1 for index in cmpl_item)
+        pz_xs = np.sum(pzxv, axis=cmpl_axes, keepdims=True)
+        pz_xsc = np.sum(pzxv, axis=item_axes, keepdims=True)
+        pxs_given_z = np.divide(
+            pz_xs,
+            pz,
+            out=np.zeros_like(pz_xs, dtype=float),
+            where=pz > 0,
+        )
+        pxsc_given_z = np.divide(
+            pz_xsc,
+            pz,
+            out=np.zeros_like(pz_xsc, dtype=float),
+            where=pz > 0,
+        )
+        cmi_dict[sidx] = np.sum(
+            pzxv
+            * (
+                np.log(np.maximum(pxv_given_z, tiny))
+                - np.log(np.maximum(pxs_given_z, tiny))
+                - np.log(np.maximum(pxsc_given_z, tiny))
+            )
+        )
     return cmi_dict
 
-def primal_dual_wyner_dca(pxv,nz,gamma,maxiter,convthres,**kwargs):
+def primal_dual_wyner_dca(pxv,nz,epsilon,maxiter,convthres,**kwargs):
     d_seed = kwargs.get("seed",None)
-    nx_shape = pxv.shape
     nview = len(pxv.shape)
-    cmi_threshold = kwargs.get("cmi_threshold",1e-2)
 
     # assumption: uniformly Z
     pzcxv, pz, set_dict = _init_variables(pxv,nview,nz,d_seed,load_pzcxv=kwargs.get("load_pzcxv",None))
-
-    dual_vars = np.ones(len(set_dict))/len(set_dict)
+    tuple_list = set_dict["tuple_list"]
+    dual_vars = np.ones(len(tuple_list))/len(tuple_list)
 
     # primal step
     niter= 0
     conv_flag = False
     pzxv = pzcxv * pxv[None,...]
     pzcx_set = ut.getPZCXsetDCA(pzxv,set_dict)
+    mi_zxv = ut.calcMInV(pzxv)
+    loss = mi_zxv - np.sum(dual_vars * _cmi_subset(pzxv,set_dict))
     while niter < maxiter:
         niter += 1
         # Primal step
@@ -72,22 +95,24 @@ def primal_dual_wyner_dca(pxv,nz,gamma,maxiter,convthres,**kwargs):
         # use online mirror descent to update dual_vars smoothly
 
         cmi_dict = _cmi_subset(new_pzxv,set_dict)
-        row_dual = np.argmax(cmi_dict)
         # update dual_vars
         omd_step_size = 1.0/(niter**0.5)
-        dual_vars *= np.exp(omd_step_size * (cmi_dict - cmi_threshold))
+        log_dual = np.log(dual_vars) + omd_step_size * (cmi_dict - epsilon)
+        log_dual -= np.max(log_dual)
+        dual_vars = np.exp(log_dual)
         dual_vars /= np.sum(dual_vars)
         # compute primal dual gap
         # compute joint mutual information I(Z;X_1,...,X_n)
         mi_zxv = ut.calcMInV(new_pzxv)
-        gap = mi_zxv - np.sum(dual_vars * (cmi_dict - cmi_threshold))
-        if np.abs(gap) < convthres:
+        new_loss = mi_zxv - np.sum(dual_vars * cmi_dict)
+        pzcxv = new_pzcxv
+        pz = new_pz
+        pzxv = new_pzxv
+        if np.abs(new_loss - loss) < convthres:
             conv_flag = True
             break
-        else:
-            pzcxv = new_pzcxv
-            pz = new_pz
-            pzxv = new_pzxv
+        loss = new_loss
+        pzcx_set = ut.getPZCXsetDCA(pzxv, set_dict)
     # DCA has zero approximation error
     est_pzxv = pzcxv * pxv[None,...]
     return {"conv":conv_flag,"niter":niter,"pzcxv":pzcxv,"pz":pz,"est_pzxv":est_pzxv}

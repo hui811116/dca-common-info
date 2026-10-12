@@ -2,10 +2,9 @@ import numpy as np
 import os
 import sys
 import pickle
-import dcacinfo.utils._utils as ut
-import dcacinfo.solver.algorithm as alg
-import dcacinfo.solver.baseline as bs
-import dcacinfo.dataset.dataset as dt
+import dcacinfo.utils as ut
+import dcacinfo.solver as alg
+import dcacinfo.dataset as dt
 import datetime
 import copy
 import argparse
@@ -16,7 +15,7 @@ import time
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("method",choices=['wynerdca','wyneram','gd','dca2v','wynervi'])
+parser.add_argument("method",choices=['wynerdca','wyneram','gd','dca2v','wynervi','wynerpd'],help="which method to use")
 parser.add_argument("--maxiter",type=int,default=5000,help="maximum iteration before termination")
 parser.add_argument("--convthres",type=float,default=1e-6,help="convergence threshold")
 parser.add_argument("--nrun",type=int,default=10,help="number of trail of each simulation")
@@ -63,7 +62,9 @@ elif args.method == "wyneram":
 elif args.method == "wynervi":
 	algrun = alg.wynerVInV
 elif args.method == "gd":
-	algrun = bs.gdnV
+	algrun = alg.gdnV
+elif args.method == "wynerpd":
+	algrun = alg.primal_dual_wyner_dca
 elif args.method == "dca2v":
 	algrun = alg.wynerDCA
 else:
